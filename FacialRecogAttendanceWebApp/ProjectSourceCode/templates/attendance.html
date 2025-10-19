@@ -1,0 +1,256 @@
+{% extends 'base.html' %}
+
+{% block title %}Attendance Details - Facial Attendance System{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{{ url_for('dashboard') }}">Dashboard</a></li>
+                <li class="breadcrumb-item active" aria-current="page">Attendance Details</li>
+            </ol>
+        </nav>
+        <h2 class="mb-3">
+            <i class="fas fa-clipboard-list text-primary me-2"></i>
+            Class Session: {{ session.name }}
+        </h2>
+        <div class="row mb-4">
+            <div class="col-md-6">
+                <div class="card shadow-sm">
+                    <div class="card-body">
+                        <h5 class="card-title">
+                            <i class="fas fa-info-circle me-2"></i>
+                            Session Details
+                        </h5>
+                        <table class="table table-sm">
+                            <tr>
+                                <th style="width: 150px;">Date:</th>
+                                <td>{{ session.date.strftime('%Y-%m-%d') }}</td>
+                            </tr>
+                            <tr>
+                                <th>Course:</th>
+                                <td>{{ session.course or 'N/A' }}</td>
+                            </tr>
+                            <tr>
+                                <th>Attendance:</th>
+                                <td>
+                                    {% set percentage = (session.present_students / session.total_students * 100) if session.total_students > 0 else 0 %}
+                                    <div class="progress" style="height: 20px;">
+                                        <div class="progress-bar bg-success" role="progressbar" 
+                                            style="width: {{ percentage }}%;" 
+                                            aria-valuenow="{{ percentage|round }}" 
+                                            aria-valuemin="0" 
+                                            aria-valuemax="100">
+                                            {{ percentage|round }}%
+                                        </div>
+                                    </div>
+                                    <small class="text-muted">{{ session.present_students }} out of {{ session.total_students }} students</small>
+                                </td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card shadow-sm">
+                    <div class="card-body">
+                        <h5 class="card-title">
+                            <i class="fas fa-camera me-2"></i>
+                            Processed Images
+                        </h5>
+                        {% if processed_images %}
+                        <div class="row">
+                            {% for image in processed_images %}
+                            <div class="col-6 col-md-4 mb-3">
+                                <div class="card">
+                                    <img src="{{ url_for('static', filename='processed/' + image.processed_filename) }}" 
+                                        class="card-img-top" alt="Processed Image">
+                                    <div class="card-body p-2">
+                                        <small class="text-muted">
+                                            <i class="fas fa-users me-1"></i> {{ image.faces_detected }} detected,
+                                            <i class="fas fa-check-circle me-1"></i> {{ image.faces_recognized }} recognized
+                                        </small>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        {% else %}
+                        <div class="alert alert-info mb-0">
+                            <i class="fas fa-info-circle me-2"></i>
+                            No processed images available for this session.
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Attendance List -->
+<div class="row">
+    <div class="col-12">
+        <div class="card shadow-sm">
+            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Student Attendance</h5>
+                <div>
+                    <button class="btn btn-sm btn-light" id="toggleStatusBtn">
+                        <i class="fas fa-filter me-1"></i> Show All
+                    </button>
+                    <a href="#" class="btn btn-sm btn-light ms-2">
+                        <i class="fas fa-file-export me-1"></i> Export
+                    </a>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover" id="attendanceTable">
+                        <thead>
+                            <tr>
+                                <th>Roll No.</th>
+                                <th>Name</th>
+                                <th>Course</th>
+                                <th>Status</th>
+                                <th>Marked At</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for student, attendance in attendance_records %}
+                            <tr class="attendance-row {{ 'present' if attendance else 'absent' }}">
+                                <td>{{ student.roll_number }}</td>
+                                <td>{{ student.name }}</td>
+                                <td>{{ student.course or 'N/A' }}</td>
+                                <td>
+                                    {% if attendance %}
+                                    <span class="badge bg-success">Present</span>
+                                    {% else %}
+                                    <span class="badge bg-danger">Absent</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if attendance %}
+                                    {{ attendance.marked_at.strftime('%Y-%m-%d %H:%M') }}
+                                    {% else %}
+                                    -
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if attendance %}
+                                    <button class="btn btn-sm btn-danger mark-btn" data-status="absent" data-student-id="{{ student.id }}" data-session-id="{{ session.id }}">
+                                        <i class="fas fa-times"></i> Mark Absent
+                                    </button>
+                                    {% else %}
+                                    <button class="btn btn-sm btn-success mark-btn" data-status="present" data-student-id="{{ student.id }}" data-session-id="{{ session.id }}">
+                                        <i class="fas fa-check"></i> Mark Present
+                                    </button>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const toggleStatusBtn = document.getElementById('toggleStatusBtn');
+        let showingAll = true;
+        
+        if (toggleStatusBtn) {
+            toggleStatusBtn.addEventListener('click', function() {
+                const rows = document.querySelectorAll('.attendance-row');
+                
+                if (showingAll) {
+                    // Show only present students
+                    rows.forEach(row => {
+                        if (row.classList.contains('absent')) {
+                            row.style.display = 'none';
+                        }
+                    });
+                    toggleStatusBtn.innerHTML = '<i class="fas fa-filter me-1"></i> Show All';
+                } else {
+                    // Show all students
+                    rows.forEach(row => {
+                        row.style.display = '';
+                    });
+                    toggleStatusBtn.innerHTML = '<i class="fas fa-filter me-1"></i> Show Present';
+                }
+                
+                showingAll = !showingAll;
+            });
+        }
+        
+        // Handle mark present/absent buttons
+        const markButtons = document.querySelectorAll('.mark-btn');
+        markButtons.forEach(button => {
+            button.addEventListener('click', function() {
+                const studentId = this.getAttribute('data-student-id');
+                const sessionId = this.getAttribute('data-session-id');
+                const status = this.getAttribute('data-status');
+                const buttonElement = this;
+                
+                // Disable button during processing
+                buttonElement.disabled = true;
+                buttonElement.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Processing...';
+                
+                // Create form data
+                const formData = new FormData();
+                formData.append('student_id', studentId);
+                formData.append('session_id', sessionId);
+                formData.append('status', status);
+                
+                // Make API call to update attendance
+                fetch('/attendance/mark', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // Show success message
+                        const alertDiv = document.createElement('div');
+                        alertDiv.className = 'alert alert-success alert-dismissible fade show';
+                        alertDiv.innerHTML = `
+                            <strong>Success!</strong> ${data.message}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        `;
+                        
+                        // Add alert to the page
+                        const contentDiv = document.querySelector('main .container');
+                        contentDiv.insertBefore(alertDiv, contentDiv.firstChild);
+                        
+                        // Reload the page to show updated status
+                        setTimeout(() => {
+                            window.location.reload();
+                        }, 1500);
+                    } else {
+                        // Show error message
+                        alert('Error: ' + data.message);
+                        buttonElement.disabled = false;
+                        buttonElement.innerHTML = status === 'present' ? 
+                            '<i class="fas fa-check"></i> Mark Present' : 
+                            '<i class="fas fa-times"></i> Mark Absent';
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('An error occurred while updating attendance');
+                    buttonElement.disabled = false;
+                    buttonElement.innerHTML = status === 'present' ? 
+                        '<i class="fas fa-check"></i> Mark Present' : 
+                        '<i class="fas fa-times"></i> Mark Absent';
+                });
+            });
+        });
+    });
+</script>
+{% endblock %}

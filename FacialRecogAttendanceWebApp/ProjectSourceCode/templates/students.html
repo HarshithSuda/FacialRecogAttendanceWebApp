@@ -1,0 +1,198 @@
+{% extends 'base.html' %}
+
+{% block title %}Students - Facial Attendance System{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{{ url_for('dashboard') }}">Dashboard</a></li>
+                <li class="breadcrumb-item active" aria-current="page">Students</li>
+            </ol>
+        </nav>
+        <h2 class="mb-4">
+            <i class="fas fa-user-graduate text-primary me-2"></i>
+            Student Management
+        </h2>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-5">
+        <div class="card shadow-sm mb-4">
+            <div class="card-header bg-primary text-white">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-user-plus me-2"></i>
+                    Add New Student
+                </h5>
+            </div>
+            <div class="card-body">
+                <form method="POST" enctype="multipart/form-data">
+                    <div class="mb-3">
+                        <label for="roll_number" class="form-label">Roll Number *</label>
+                        <input type="text" class="form-control" id="roll_number" name="roll_number" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="name" class="form-label">Full Name *</label>
+                        <input type="text" class="form-control" id="name" name="name" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="email" class="form-label">Email (Optional)</label>
+                        <input type="email" class="form-control" id="email" name="email">
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="course" class="form-label">Course (Optional)</label>
+                        <input type="text" class="form-control" id="course" name="course">
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="student_photo" class="form-label">Student Photo *</label>
+                        <input type="file" class="form-control" id="student_photo" name="student_photo" accept="image/*" required>
+                        <div class="form-text">
+                            Upload a clear front-facing photo of the student. This will be used for facial recognition.
+                        </div>
+                    </div>
+                    
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save me-2"></i>
+                            Add Student
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        
+        <div class="card shadow-sm">
+            <div class="card-header bg-primary text-white">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-file-import me-2"></i>
+                    Bulk Import
+                </h5>
+            </div>
+            <div class="card-body">
+                <form method="POST" enctype="multipart/form-data">
+                    <div class="mb-3">
+                        <label for="excel_file" class="form-label">Excel File</label>
+                        <input type="file" class="form-control" id="excel_file" name="excel_file" accept=".xlsx, .xls">
+                        <div class="form-text">
+                            Upload an Excel file with columns: roll_number, name, email, course, photo_path (optional).
+                        </div>
+                    </div>
+                    
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-outline-primary">
+                            <i class="fas fa-file-import me-2"></i>
+                            Import Students
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-7">
+        <div class="card shadow-sm">
+            <div class="card-header bg-primary text-white">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-list me-2"></i>
+                        Student List
+                    </h5>
+                    <div class="btn-group">
+                        <a href="{{ url_for('update_face') }}" class="btn btn-sm btn-light">
+                            <i class="fas fa-camera me-1"></i> Update Faces
+                        </a>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body">
+                {% if students %}
+                <div class="table-responsive">
+                    <table class="table table-hover" id="studentTable">
+                        <thead>
+                            <tr>
+                                <th>Roll Number</th>
+                                <th>Name</th>
+                                <th>Course</th>
+                                <th>Face Data</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for student in students %}
+                            <tr>
+                                <td>{{ student.roll_number }}</td>
+                                <td>{{ student.name }}</td>
+                                <td>{{ student.course or 'N/A' }}</td>
+                                <td>
+                                    {% if student.face_encodings|length > 0 %}
+                                    <span class="badge bg-success">{{ student.face_encodings|length }} photos</span>
+                                    {% else %}
+                                    <span class="badge bg-danger">No face data</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <div class="btn-group btn-group-sm">
+                                        <a href="{{ url_for('update_face', roll=student.roll_number) }}" class="btn btn-primary">
+                                            <i class="fas fa-camera"></i>
+                                        </a>
+                                        <button type="button" class="btn btn-info">
+                                            <i class="fas fa-eye"></i>
+                                        </button>
+                                        <button type="button" class="btn btn-danger">
+                                            <i class="fas fa-trash-alt"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle me-2"></i>
+                    No students added yet. Add your first student using the form.
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Add preview functionality for student photo
+        const photoInput = document.getElementById('student_photo');
+        
+        if (photoInput) {
+            photoInput.addEventListener('change', function(e) {
+                if (e.target.files.length > 0) {
+                    const file = e.target.files[0];
+                    
+                    if (!file.type.match('image.*')) {
+                        return;
+                    }
+                    
+                    const reader = new FileReader();
+                    
+                    reader.onload = function(e) {
+                        // Show preview if needed
+                        // For now, we'll just log it
+                        console.log('Photo selected:', file.name);
+                    };
+                    
+                    reader.readAsDataURL(file);
+                }
+            });
+        }
+    });
+</script>
+{% endblock %}

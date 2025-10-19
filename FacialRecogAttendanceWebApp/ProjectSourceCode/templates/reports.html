@@ -1,0 +1,698 @@
+{% extends 'base.html' %}
+
+{% block title %}Attendance Reports - Facial Attendance System{% endblock %}
+
+{% block head %}
+<!-- Include DataTables CSS -->
+<link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.11.5/css/dataTables.bootstrap5.min.css">
+<link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/buttons/2.2.2/css/buttons.bootstrap5.min.css">
+<!-- Date Range Picker -->
+<link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.css" />
+<style>
+    .alert-warning {
+        background-color: rgba(255, 193, 7, 0.2);
+        border-color: rgba(255, 193, 7, 0.4);
+    }
+    .alert-danger {
+        background-color: rgba(220, 53, 69, 0.2);
+        border-color: rgba(220, 53, 69, 0.4);
+    }
+    .nav-tabs .nav-link.active {
+        border-bottom: 3px solid var(--bs-primary);
+        font-weight: bold;
+    }
+    .date-range-form .form-control {
+        max-width: 160px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{{ url_for('dashboard') }}">Dashboard</a></li>
+                <li class="breadcrumb-item active" aria-current="page">Attendance Reports</li>
+            </ol>
+        </nav>
+        <h2 class="mb-4">
+            <i class="fas fa-chart-pie text-primary me-2"></i>
+            Attendance Reports
+        </h2>
+    </div>
+</div>
+
+<!-- Date Range Filter -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <form id="dateRangeForm" class="date-range-form row align-items-end">
+                    <div class="col-md-6 mb-3 mb-md-0">
+                        <div class="row">
+                            <div class="col-md-6 mb-2 mb-md-0">
+                                <label for="startDate" class="form-label">Start Date</label>
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="fas fa-calendar"></i></span>
+                                    <input type="date" class="form-control" id="startDate" name="startDate">
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="endDate" class="form-label">End Date</label>
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="fas fa-calendar"></i></span>
+                                    <input type="date" class="form-control" id="endDate" name="endDate">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3 mb-3 mb-md-0">
+                        <label for="courseFilter" class="form-label">Course</label>
+                        <select class="form-select" id="courseFilter" name="course">
+                            <option value="">All Courses</option>
+                            {% for course in courses %}
+                                <option value="{{ course }}">{{ course }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-5 d-flex align-items-end justify-content-end gap-2">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-filter me-2"></i>Apply Filters
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary" id="resetFilters">
+                            <i class="fas fa-redo me-2"></i>Reset
+                        </button>
+                        <div class="dropdown">
+                            <button class="btn btn-success dropdown-toggle" type="button" id="exportDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                                <i class="fas fa-file-export me-2"></i>Export
+                            </button>
+                            <ul class="dropdown-menu" aria-labelledby="exportDropdown">
+                                <li><a class="dropdown-item" href="#" id="exportCsv"><i class="fas fa-file-csv me-2"></i>CSV</a></li>
+                                <li><a class="dropdown-item" href="#" id="exportPdf"><i class="fas fa-file-pdf me-2"></i>PDF</a></li>
+                            </ul>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Report Tabs -->
+<div class="row">
+    <div class="col-12">
+        <div class="card shadow-sm">
+            <div class="card-header bg-primary text-white">
+                <ul class="nav nav-tabs card-header-tabs" id="reportTabs" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link text-white active" id="daily-tab" data-bs-toggle="tab" data-bs-target="#daily" type="button" role="tab" aria-controls="daily" aria-selected="true">
+                            <i class="fas fa-calendar-day me-2"></i>Daily
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link text-white" id="student-tab" data-bs-toggle="tab" data-bs-target="#student" type="button" role="tab" aria-controls="student" aria-selected="false">
+                            <i class="fas fa-user-graduate me-2"></i>Student-wise
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link text-white" id="course-tab" data-bs-toggle="tab" data-bs-target="#course" type="button" role="tab" aria-controls="course" aria-selected="false">
+                            <i class="fas fa-book me-2"></i>Course-wise
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link text-white" id="alerts-tab" data-bs-toggle="tab" data-bs-target="#alerts" type="button" role="tab" aria-controls="alerts" aria-selected="false">
+                            <i class="fas fa-exclamation-triangle me-2"></i>Attendance Alerts
+                        </button>
+                    </li>
+                </ul>
+            </div>
+            <div class="card-body">
+                <div class="tab-content" id="reportTabsContent">
+                    <!-- Daily Attendance Tab -->
+                    <div class="tab-pane fade show active" id="daily" role="tabpanel" aria-labelledby="daily-tab">
+                        <h5 class="mb-3">Daily Attendance Summary</h5>
+                        <div class="table-responsive">
+                            <table class="table table-hover" id="dailyTable">
+                                <thead>
+                                    <tr>
+                                        <th>Date</th>
+                                        <th>Class Session</th>
+                                        <th>Course</th>
+                                        <th>Students Present</th>
+                                        <th>Total Students</th>
+                                        <th>Attendance %</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for session in sessions %}
+                                    <tr>
+                                        <td>{{ session.date.strftime('%Y-%m-%d') }}</td>
+                                        <td>{{ session.name }}</td>
+                                        <td>{{ session.course or 'N/A' }}</td>
+                                        <td>{{ session.present_students }}</td>
+                                        <td>{{ session.total_students }}</td>
+                                        <td>
+                                            {% set attendance_percentage = (session.present_students / session.total_students * 100) if session.total_students > 0 else 0 %}
+                                            <div class="progress" style="height: 20px;">
+                                                <div class="progress-bar {{ 'bg-danger' if attendance_percentage < 80 else 'bg-success' }}" 
+                                                     role="progressbar" 
+                                                     style="width: {{ attendance_percentage }}%;" 
+                                                     aria-valuenow="{{ attendance_percentage|round(1) }}" 
+                                                     aria-valuemin="0" 
+                                                     aria-valuemax="100">
+                                                    {{ attendance_percentage|round(1) }}%
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <a href="{{ url_for('attendance', session_id=session.id) }}" class="btn btn-sm btn-primary">
+                                                <i class="fas fa-eye"></i> View
+                                            </a>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    
+                    <!-- Student-wise Attendance Tab -->
+                    <div class="tab-pane fade" id="student" role="tabpanel" aria-labelledby="student-tab">
+                        <h5 class="mb-3">Student-wise Attendance Summary</h5>
+                        <div class="table-responsive">
+                            <table class="table table-hover" id="studentTable">
+                                <thead>
+                                    <tr>
+                                        <th>Roll Number</th>
+                                        <th>Name</th>
+                                        <th>Course</th>
+                                        <th>Present Days</th>
+                                        <th>Total Sessions</th>
+                                        <th>Attendance %</th>
+                                        <th>Last Attendance</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for student in student_attendance %}
+                                    <tr>
+                                        <td>{{ student.roll_number }}</td>
+                                        <td>{{ student.name }}</td>
+                                        <td>{{ student.course or 'N/A' }}</td>
+                                        <td>{{ student.present_count }}</td>
+                                        <td>{{ student.total_sessions }}</td>
+                                        <td>
+                                            {% set percentage = (student.present_count / student.total_sessions * 100) if student.total_sessions > 0 else 0 %}
+                                            <div class="progress" style="height: 20px;">
+                                                <div class="progress-bar {{ 'bg-danger' if percentage < 80 else 'bg-success' }}" 
+                                                     role="progressbar" 
+                                                     style="width: {{ percentage }}%;" 
+                                                     aria-valuenow="{{ percentage|round(1) }}" 
+                                                     aria-valuemin="0" 
+                                                     aria-valuemax="100">
+                                                    {{ percentage|round(1) }}%
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td>{{ student.last_attendance.strftime('%Y-%m-%d') if student.last_attendance else 'Never' }}</td>
+                                        <td>
+                                            <button class="btn btn-sm btn-info view-student-detail" data-student-id="{{ student.id }}">
+                                                <i class="fas fa-chart-line"></i> Details
+                                            </button>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    
+                    <!-- Course-wise Attendance Tab -->
+                    <div class="tab-pane fade" id="course" role="tabpanel" aria-labelledby="course-tab">
+                        <h5 class="mb-3">Course-wise Attendance Summary</h5>
+                        <div class="table-responsive">
+                            <table class="table table-hover" id="courseTable">
+                                <thead>
+                                    <tr>
+                                        <th>Course</th>
+                                        <th>Total Students</th>
+                                        <th>Total Sessions</th>
+                                        <th>Average Attendance %</th>
+                                        <th>Last Session</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for course in course_attendance %}
+                                    <tr>
+                                        <td>{{ course.name or 'Uncategorized' }}</td>
+                                        <td>{{ course.student_count }}</td>
+                                        <td>{{ course.session_count }}</td>
+                                        <td>
+                                            <div class="progress" style="height: 20px;">
+                                                <div class="progress-bar {{ 'bg-danger' if course.avg_attendance < 80 else 'bg-success' }}" 
+                                                     role="progressbar" 
+                                                     style="width: {{ course.avg_attendance }}%;" 
+                                                     aria-valuenow="{{ course.avg_attendance|round(1) }}" 
+                                                     aria-valuemin="0" 
+                                                     aria-valuemax="100">
+                                                    {{ course.avg_attendance|round(1) }}%
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td>{{ course.last_session.strftime('%Y-%m-%d') if course.last_session else 'N/A' }}</td>
+                                        <td>
+                                            <button class="btn btn-sm btn-info view-course-detail" data-course="{{ course.name }}">
+                                                <i class="fas fa-chart-line"></i> Details
+                                            </button>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    
+                    <!-- Attendance Alerts Tab -->
+                    <div class="tab-pane fade" id="alerts" role="tabpanel" aria-labelledby="alerts-tab">
+                        <h5 class="mb-3">Attendance Alerts</h5>
+                        
+                        <!-- Low Attendance Section -->
+                        <div class="card mb-4">
+                            <div class="card-header bg-warning text-dark">
+                                <h6 class="mb-0"><i class="fas fa-exclamation-circle me-2"></i>Students with Less Than 80% Attendance</h6>
+                            </div>
+                            <div class="card-body">
+                                {% if low_attendance %}
+                                <div class="table-responsive">
+                                    <table class="table table-sm table-hover" id="lowAttendanceTable">
+                                        <thead>
+                                            <tr>
+                                                <th>Roll Number</th>
+                                                <th>Name</th>
+                                                <th>Course</th>
+                                                <th>Present</th>
+                                                <th>Total</th>
+                                                <th>Attendance %</th>
+                                                <th>Last Present</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for student in low_attendance %}
+                                            <tr>
+                                                <td>{{ student.roll_number }}</td>
+                                                <td>{{ student.name }}</td>
+                                                <td>{{ student.course or 'N/A' }}</td>
+                                                <td>{{ student.present_count }}</td>
+                                                <td>{{ student.total_sessions }}</td>
+                                                <td>
+                                                    {% set percentage = (student.present_count / student.total_sessions * 100) if student.total_sessions > 0 else 0 %}
+                                                    <span class="badge bg-danger">{{ percentage|round(1) }}%</span>
+                                                </td>
+                                                <td>{{ student.last_attendance.strftime('%Y-%m-%d') if student.last_attendance else 'Never' }}</td>
+                                            </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                                {% else %}
+                                <div class="alert alert-success mb-0">
+                                    <i class="fas fa-check-circle me-2"></i>
+                                    No students with attendance below 80%.
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <!-- Consecutive Absences Section -->
+                        <div class="card">
+                            <div class="card-header bg-danger text-white">
+                                <h6 class="mb-0"><i class="fas fa-exclamation-triangle me-2"></i>Students with 3+ Consecutive Absences</h6>
+                            </div>
+                            <div class="card-body">
+                                {% if consecutive_absences %}
+                                <div class="table-responsive">
+                                    <table class="table table-sm table-hover" id="consecutiveAbsencesTable">
+                                        <thead>
+                                            <tr>
+                                                <th>Roll Number</th>
+                                                <th>Name</th>
+                                                <th>Course</th>
+                                                <th>Consecutive Absences</th>
+                                                <th>Last Present</th>
+                                                <th>Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for student in consecutive_absences %}
+                                            <tr>
+                                                <td>{{ student.roll_number }}</td>
+                                                <td>{{ student.name }}</td>
+                                                <td>{{ student.course or 'N/A' }}</td>
+                                                <td>
+                                                    <span class="badge bg-danger">{{ student.consecutive_absences }} days</span>
+                                                </td>
+                                                <td>{{ student.last_attendance.strftime('%Y-%m-%d') if student.last_attendance else 'Never' }}</td>
+                                                <td>
+                                                    <button class="btn btn-sm btn-info view-student-detail" data-student-id="{{ student.id }}">
+                                                        <i class="fas fa-chart-line"></i> Details
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                                {% else %}
+                                <div class="alert alert-success mb-0">
+                                    <i class="fas fa-check-circle me-2"></i>
+                                    No students with 3 or more consecutive absences.
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Student Detail Modal -->
+<div class="modal fade" id="studentDetailModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title"><i class="fas fa-user-graduate me-2"></i>Student Attendance Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div id="studentDetailContent">
+                    <div class="text-center p-5">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Course Detail Modal -->
+<div class="modal fade" id="courseDetailModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title"><i class="fas fa-book me-2"></i>Course Attendance Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div id="courseDetailContent">
+                    <div class="text-center p-5">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<!-- Include DataTables JS -->
+<script type="text/javascript" src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
+<script type="text/javascript" src="https://cdn.datatables.net/1.11.5/js/dataTables.bootstrap5.min.js"></script>
+<!-- DataTables Buttons -->
+<script type="text/javascript" src="https://cdn.datatables.net/buttons/2.2.2/js/dataTables.buttons.min.js"></script>
+<script type="text/javascript" src="https://cdn.datatables.net/buttons/2.2.2/js/buttons.bootstrap5.min.js"></script>
+<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.1.3/jszip.min.js"></script>
+<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.53/pdfmake.min.js"></script>
+<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.53/vfs_fonts.js"></script>
+<script type="text/javascript" src="https://cdn.datatables.net/buttons/2.2.2/js/buttons.html5.min.js"></script>
+<script type="text/javascript" src="https://cdn.datatables.net/buttons/2.2.2/js/buttons.print.min.js"></script>
+
+<!-- Date Range Picker -->
+<script type="text/javascript" src="https://cdn.jsdelivr.net/momentjs/latest/moment.min.js"></script>
+<script type="text/javascript" src="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.min.js"></script>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Initialize DataTables
+        const dailyTable = $('#dailyTable').DataTable({
+            responsive: true,
+            order: [[0, 'desc']]
+        });
+        
+        const studentTable = $('#studentTable').DataTable({
+            responsive: true,
+            order: [[5, 'asc']] // Sort by attendance percentage
+        });
+        
+        const courseTable = $('#courseTable').DataTable({
+            responsive: true,
+            order: [[3, 'asc']] // Sort by average attendance
+        });
+        
+        const lowAttendanceTable = $('#lowAttendanceTable').DataTable({
+            responsive: true,
+            order: [[5, 'asc']] // Sort by attendance percentage
+        });
+        
+        const consecutiveAbsencesTable = $('#consecutiveAbsencesTable').DataTable({
+            responsive: true,
+            order: [[3, 'desc']] // Sort by consecutive absences
+        });
+        
+        // Initialize date pickers with default values
+        const today = new Date();
+        const thirtyDaysAgo = new Date(today);
+        thirtyDaysAgo.setDate(today.getDate() - 30);
+        
+        // Format dates as YYYY-MM-DD for the date inputs
+        const formatDateForInput = (date) => {
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        };
+        
+        // Set default values
+        $('#startDate').val(formatDateForInput(thirtyDaysAgo));
+        $('#endDate').val(formatDateForInput(today));
+        
+        // Filter form submission
+        $('#dateRangeForm').on('submit', function(e) {
+            e.preventDefault();
+            
+            const startDate = $('#startDate').val();
+            const endDate = $('#endDate').val();
+            const course = $('#courseFilter').val();
+            
+            // Here you would normally make an AJAX request to get filtered data
+            // For now, just show a message
+            alert('Filter applied: ' + startDate + ' to ' + endDate + ', Course: ' + course);
+        });
+        
+        // Reset filters
+        $('#resetFilters').on('click', function() {
+            $('#startDate').val(formatDateForInput(thirtyDaysAgo));
+            $('#endDate').val(formatDateForInput(today));
+            $('#courseFilter').val('');
+            $('#dateRangeForm').submit();
+        });
+        
+        // Export to CSV
+        $('#exportCsv').on('click', function() {
+            const activeTab = $('.tab-pane.active').attr('id');
+            let table;
+            
+            switch (activeTab) {
+                case 'daily':
+                    table = dailyTable;
+                    break;
+                case 'student':
+                    table = studentTable;
+                    break;
+                case 'course':
+                    table = courseTable;
+                    break;
+                case 'alerts':
+                    // Default to low attendance table if on alerts tab
+                    table = lowAttendanceTable;
+                    break;
+            }
+            
+            if (table) {
+                // Get current tab name for the filename
+                const filename = 'attendance_' + activeTab + '_' + moment().format('YYYY-MM-DD') + '.csv';
+                
+                // Export to CSV
+                const csvContent = 'data:text/csv;charset=utf-8,';
+                
+                // Get headers
+                const headers = [];
+                table.columns().header().each(function(header) {
+                    headers.push($(header).text());
+                });
+                
+                const rows = [headers.join(',')];
+                
+                // Get data rows
+                table.rows().data().each(function(row) {
+                    const csvRow = [];
+                    for (let i = 0; i < row.length - 1; i++) { // Exclude actions column
+                        // Clean up the HTML content to get just the text
+                        const cell = row[i];
+                        const cellText = $('<div>').html(cell).text().trim();
+                        csvRow.push('"' + cellText.replace(/"/g, '""') + '"');
+                    }
+                    rows.push(csvRow.join(','));
+                });
+                
+                // Create and trigger download link
+                const encodedUri = encodeURI(csvContent + rows.join('\n'));
+                const link = document.createElement('a');
+                link.setAttribute('href', encodedUri);
+                link.setAttribute('download', filename);
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            }
+        });
+        
+        // Export to PDF
+        $('#exportPdf').on('click', function() {
+            const activeTab = $('.tab-pane.active').attr('id');
+            let table;
+            let title;
+            
+            switch (activeTab) {
+                case 'daily':
+                    table = dailyTable;
+                    title = 'Daily Attendance Report';
+                    break;
+                case 'student':
+                    table = studentTable;
+                    title = 'Student-wise Attendance Report';
+                    break;
+                case 'course':
+                    table = courseTable;
+                    title = 'Course-wise Attendance Report';
+                    break;
+                case 'alerts':
+                    // Default to low attendance table if on alerts tab
+                    table = lowAttendanceTable;
+                    title = 'Low Attendance Alert Report';
+                    break;
+            }
+            
+            if (table) {
+                // Get column headers
+                const headers = [];
+                table.columns().header().each(function(header) {
+                    headers.push($(header).text());
+                });
+                
+                // Remove the Actions column if it exists
+                const columnsToInclude = headers.length - 1;
+                
+                // Get data
+                const body = [];
+                table.rows().data().each(function(row) {
+                    const dataRow = [];
+                    for (let i = 0; i < columnsToInclude; i++) {
+                        // Clean up HTML to get just the text
+                        const cell = row[i];
+                        const cellText = $('<div>').html(cell).text().trim();
+                        dataRow.push(cellText);
+                    }
+                    body.push(dataRow);
+                });
+                
+                // Create document definition
+                const docDefinition = {
+                    pageSize: 'A4',
+                    pageOrientation: 'landscape',
+                    content: [
+                        { text: title, style: 'header' },
+                        { text: 'Date Range: ' + $('#startDate').val() + ' to ' + $('#endDate').val(), style: 'subheader' },
+                        {
+                            table: {
+                                headerRows: 1,
+                                widths: Array(columnsToInclude).fill('*'),
+                                body: [headers.slice(0, columnsToInclude), ...body]
+                            }
+                        }
+                    ],
+                    styles: {
+                        header: {
+                            fontSize: 18,
+                            bold: true,
+                            margin: [0, 0, 0, 10]
+                        },
+                        subheader: {
+                            fontSize: 14,
+                            bold: true,
+                            margin: [0, 10, 0, 5]
+                        }
+                    },
+                    footer: function(currentPage, pageCount) {
+                        return {
+                            text: 'Page ' + currentPage.toString() + ' of ' + pageCount,
+                            alignment: 'center'
+                        };
+                    }
+                };
+                
+                // Generate and download PDF
+                pdfMake.createPdf(docDefinition).download('attendance_' + activeTab + '_' + moment().format('YYYY-MM-DD') + '.pdf');
+            }
+        });
+        
+        // Student detail modal
+        $('.view-student-detail').on('click', function() {
+            const studentId = $(this).data('student-id');
+            const modal = new bootstrap.Modal(document.getElementById('studentDetailModal'));
+            
+            // Here you would normally make an AJAX request to get student details
+            // For now, just show a placeholder with the student ID
+            $('#studentDetailContent').html(`
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle me-2"></i>
+                    Loading attendance details for student ID: ${studentId}
+                </div>
+                <div class="text-center">
+                    <p class="text-muted">Actual data would be loaded via AJAX in a real implementation.</p>
+                </div>
+            `);
+            
+            modal.show();
+        });
+        
+        // Course detail modal
+        $('.view-course-detail').on('click', function() {
+            const course = $(this).data('course');
+            const modal = new bootstrap.Modal(document.getElementById('courseDetailModal'));
+            
+            // Here you would normally make an AJAX request to get course details
+            // For now, just show a placeholder with the course name
+            $('#courseDetailContent').html(`
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle me-2"></i>
+                    Loading attendance details for course: ${course || 'Uncategorized'}
+                </div>
+                <div class="text-center">
+                    <p class="text-muted">Actual data would be loaded via AJAX in a real implementation.</p>
+                </div>
+            `);
+            
+            modal.show();
+        });
+    });
+</script>
+{% endblock %}

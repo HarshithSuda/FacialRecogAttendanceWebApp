@@ -1,0 +1,71 @@
+/* Custom styles for the Facial Attendance System */
+
+/* Main layout styles */
+body {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+main {
+    flex: 1;
+}
+
+/* Dashboard cards */
+.card {
+    transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+}
+
+.card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15) !important;
+}
+
+/* Image previews */
+#imagePreview img {
+    object-fit: contain;
+    max-height: 200px;
+    width: auto;
+}
+
+/* Face images in update-face.html */
+#faceData .card img {
+    height: 200px;
+    object-fit: cover;
+}
+
+/* Preview images in upload.html */
+#preview-container .card img {
+    height: 150px;
+    object-fit: cover;
+}
+
+/* Attendance statuses */
+.badge.bg-success, .badge.bg-danger {
+    font-size: 0.85rem;
+    padding: 0.35rem 0.65rem;
+}
+
+/* Form styling */
+.form-control:focus, .form-select:focus {
+    border-color: var(--bs-primary);
+    box-shadow: 0 0 0 0.25rem rgba(var(--bs-primary-rgb), 0.25);
+}
+
+/* Footer */
+.footer {
+    margin-top: auto;
+}
+
+/* Loading spinner */
+#faceLoader {
+    width: 3rem;
+    height: 3rem;
+}
+
+/* Responsive tables */
+@media (max-width: 768px) {
+    .table-responsive {
+        font-size: 0.9rem;
+    }
+}

@@ -1,0 +1,25 @@
+# Core web framework
+Flask==2.3.3
+Flask-Login==0.6.2
+Flask-SQLAlchemy==3.1.1
+gunicorn==21.2.0
+Werkzeug==2.3.7
+
+# Database
+SQLAlchemy==2.0.23
+psycopg2-binary==2.9.9
+
+# Image processing and machine learning
+opencv-python-headless==4.8.1.78
+numpy==1.26.1
+Pillow==10.1.0
+
+# Data processing
+pandas==2.1.2
+openpyxl==3.1.2
+
+# Form validation
+email-validator==2.1.0
+
+# HTTP Requests
+requests==2.31.0

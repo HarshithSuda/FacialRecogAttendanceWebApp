@@ -1,0 +1,187 @@
+{% extends 'base.html' %}
+
+{% block title %}Take Attendance - Facial Attendance System{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{{ url_for('dashboard') }}">Dashboard</a></li>
+                <li class="breadcrumb-item active" aria-current="page">Take Attendance</li>
+            </ol>
+        </nav>
+        <h2 class="mb-4">
+            <i class="fas fa-clipboard-check text-primary me-2"></i>
+            Take Attendance
+        </h2>
+        <div class="alert alert-info" role="alert">
+            <i class="fas fa-info-circle me-2"></i>
+            Upload class photos to automatically mark attendance using facial recognition.
+            For best results, make sure students' faces are clearly visible in the photos.
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-6">
+        <div class="card shadow-sm">
+            <div class="card-header bg-primary text-white">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-clipboard-list me-2"></i>
+                    Class Session Details
+                </h5>
+            </div>
+            <div class="card-body">
+                <form action="{{ url_for('take_attendance') }}" method="POST" enctype="multipart/form-data" id="uploadForm">
+                    <div class="mb-3">
+                        <label for="session_name" class="form-label">Session Name *</label>
+                        <input type="text" class="form-control" id="session_name" name="session_name" required 
+                               placeholder="e.g., Morning Lecture, Lab Session 3">
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="session_date" class="form-label">Session Date *</label>
+                        <input type="date" class="form-control" id="session_date" name="session_date" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="session_course" class="form-label">Course (Optional)</label>
+                        <input type="text" class="form-control" id="session_course" name="session_course" 
+                               placeholder="e.g., Computer Science 101">
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="files" class="form-label">Upload Photos *</label>
+                        <input type="file" class="form-control" id="files" name="files" multiple accept="image/*" required>
+                        <div class="form-text">
+                            You can select multiple photos at once. Supported formats: JPG, JPEG, PNG.
+                        </div>
+                    </div>
+                    
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-primary" id="uploadBtn">
+                            <i class="fas fa-clipboard-check me-2"></i>
+                            Take Attendance
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="card shadow-sm">
+            <div class="card-header bg-primary text-white">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-image me-2"></i>
+                    Preview
+                </h5>
+            </div>
+            <div class="card-body">
+                <div id="preview-container" class="row"></div>
+                <div id="no-preview" class="alert alert-secondary">
+                    <i class="fas fa-images me-2"></i>
+                    Selected photos will appear here for preview.
+                </div>
+            </div>
+        </div>
+        
+        <div class="card shadow-sm mt-4">
+            <div class="card-header bg-primary text-white">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-question-circle me-2"></i>
+                    How It Works
+                </h5>
+            </div>
+            <div class="card-body">
+                <ol class="list-group list-group-numbered mb-0">
+                    <li class="list-group-item">Fill in the session details</li>
+                    <li class="list-group-item">Upload one or more class photos</li>
+                    <li class="list-group-item">Our system detects faces in the photos</li>
+                    <li class="list-group-item">Recognized students are marked as present</li>
+                    <li class="list-group-item">Review the attendance list</li>
+                </ol>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Set default date to today
+        const today = new Date().toISOString().split('T')[0];
+        document.getElementById('session_date').value = today;
+        
+        // Show image previews when files are selected
+        const filesInput = document.getElementById('files');
+        const previewContainer = document.getElementById('preview-container');
+        const noPreview = document.getElementById('no-preview');
+        const uploadForm = document.getElementById('uploadForm');
+        const uploadBtn = document.getElementById('uploadBtn');
+        
+        filesInput.addEventListener('change', function() {
+            // Clear existing previews
+            previewContainer.innerHTML = '';
+            
+            if (this.files.length > 0) {
+                noPreview.style.display = 'none';
+                
+                // Create previews for each file
+                for (let i = 0; i < this.files.length; i++) {
+                    const file = this.files[i];
+                    
+                    // Only process image files
+                    if (!file.type.match('image.*')) {
+                        continue;
+                    }
+                    
+                    const reader = new FileReader();
+                    
+                    reader.onload = (function(file) {
+                        return function(e) {
+                            const col = document.createElement('div');
+                            col.className = 'col-6 col-md-6 mb-3';
+                            
+                            const card = document.createElement('div');
+                            card.className = 'card';
+                            
+                            const img = document.createElement('img');
+                            img.src = e.target.result;
+                            img.className = 'card-img-top';
+                            img.alt = 'Class Photo';
+                            
+                            const cardBody = document.createElement('div');
+                            cardBody.className = 'card-body p-2';
+                            
+                            const fileName = document.createElement('p');
+                            fileName.className = 'card-text small text-muted mb-0 text-truncate';
+                            fileName.title = file.name;
+                            fileName.textContent = file.name;
+                            
+                            cardBody.appendChild(fileName);
+                            card.appendChild(img);
+                            card.appendChild(cardBody);
+                            col.appendChild(card);
+                            
+                            previewContainer.appendChild(col);
+                        };
+                    })(file);
+                    
+                    reader.readAsDataURL(file);
+                }
+            } else {
+                noPreview.style.display = 'block';
+            }
+        });
+        
+        // Add loading state to form submission
+        uploadForm.addEventListener('submit', function() {
+            uploadBtn.disabled = true;
+            uploadBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span> Processing...';
+        });
+    });
+</script>
+{% endblock %}
