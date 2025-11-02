@@ -1,0 +1,64 @@
+body{
+    font-family: Segoe UI;
+    padding: 20px;
+    background-color: #f0f8ff;
+    text-align: center;
+}
+h1{
+    color:#4b0082;
+    margin-bottom: 40px;
+    font-size: 2.5em;
+    font-weight: 800;
+    text-shadow: 1px 1px 2px rgba(0,0,0,0.1);
+}
+table{
+    width: 95%;
+    margin :0 auto;
+    border-collapse: collapse;
+    box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+    background-color: #ffffff;
+    border: 3px solid #4b0082;
+    border-radius: 8px;
+    overflow: hidden;
+}
+thead th{
+    background-color: #3ec703;
+    color: white;
+    padding: 18px 10px;
+    font-size: 1.2em;
+    font-weight: bold;
+    border: 1px solid #19eb3f;
+}
+
+/* tbody th {
+    background-color: #9c101b;
+    color: white;
+    font-weight: bolder;
+    font-size: 5em; 
+    width: 120px;
+    border: 1px solid #1e7e34;
+} */
+td{
+    /* background-color: #931805; */
+    border: 1px solid #000000;
+    padding: 12px;
+    text-align: center;
+    font-weight: 600;
+    color:#333;
+}
+
+tbody tr:nth-child(even){
+    background-color: #f5f5f5;
+}
+tbody tr:hover{
+    background-color: #e3f2fd;
+    cursor: defaults;
+}
+
+.lunch{
+    background-color: #ffdd57 !important;
+    color: #a0522d !important;
+    font-weight: 900;
+    font-size: 1.2em;
+    letter-spacing: 1px;
+}
